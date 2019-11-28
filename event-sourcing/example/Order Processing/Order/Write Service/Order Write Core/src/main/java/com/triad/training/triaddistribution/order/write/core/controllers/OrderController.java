@@ -1,6 +1,7 @@
 package com.triad.training.triaddistribution.order.write.core.controllers;
 
-import com.triad.common.eventsourcing.eventstore.AggregateNotFoundException;
+import com.triad.common.eventsourcing.aggregateroot.UnableToApplyEventException;
+import com.triad.common.eventsourcing.command.AggregateNotFoundException;
 import com.triad.common.eventsourcing.eventstore.RetrieveFailedException;
 import com.triad.common.eventsourcing.eventstore.SaveFailedException;
 import com.triad.training.triaddistribution.order.write.api.domain.commands.*;
@@ -43,7 +44,7 @@ public class OrderController
       UUID newOrderId = orderCmdService.cmd(createNewOrder);
       return Response.ok(newOrderId).build();
     }
-    catch (SaveFailedException e)
+    catch (SaveFailedException | UnableToApplyEventException e)
     {
       return exceptionToResponseEntity(e);
     }
@@ -59,7 +60,7 @@ public class OrderController
       orderCmdService.cmd(completeOrder);
       return Response.ok().build();
     }
-    catch (InvalidCommandRequestException | AggregateNotFoundException | RetrieveFailedException | SaveFailedException e)
+    catch (InvalidCommandRequestException | AggregateNotFoundException | RetrieveFailedException | SaveFailedException | UnableToApplyEventException e)
     {
       return exceptionToResponseEntity(e);
     }
@@ -74,7 +75,7 @@ public class OrderController
     {
       orderCmdService.cmd(cancelOrder);
     }
-    catch (RetrieveFailedException | SaveFailedException | InvalidCommandRequestException | AggregateNotFoundException e)
+    catch (RetrieveFailedException | SaveFailedException | InvalidCommandRequestException | AggregateNotFoundException | UnableToApplyEventException e)
     {
       return exceptionToResponseEntity(e);
     }
@@ -90,7 +91,7 @@ public class OrderController
     {
       orderCmdService.cmd(addProductToOrder);
     }
-    catch (RetrieveFailedException | SaveFailedException | InvalidCommandRequestException | AggregateNotFoundException e)
+    catch (RetrieveFailedException | SaveFailedException | InvalidCommandRequestException | AggregateNotFoundException | UnableToApplyEventException e)
     {
       return exceptionToResponseEntity(e);
     }
@@ -106,7 +107,7 @@ public class OrderController
     {
       orderCmdService.cmd(requeryProducts);
     }
-    catch (RetrieveFailedException | SaveFailedException | InvalidCommandRequestException | AggregateNotFoundException e)
+    catch (RetrieveFailedException | SaveFailedException | InvalidCommandRequestException | AggregateNotFoundException | UnableToApplyEventException e)
     {
       return exceptionToResponseEntity(e);
     }
@@ -122,7 +123,7 @@ public class OrderController
     {
       orderCmdService.cmd(removeSuspensionsFromOrder);
     }
-    catch (RetrieveFailedException | SaveFailedException | InvalidCommandRequestException | AggregateNotFoundException e)
+    catch (RetrieveFailedException | SaveFailedException | InvalidCommandRequestException | AggregateNotFoundException | UnableToApplyEventException e)
     {
       return exceptionToResponseEntity(e);
     }
@@ -132,7 +133,7 @@ public class OrderController
   private Response exceptionToResponseEntity(Throwable throwable)
   {
     Status status;
-    if (throwable instanceof SaveFailedException || throwable instanceof RetrieveFailedException)
+    if (throwable instanceof SaveFailedException || throwable instanceof RetrieveFailedException || throwable instanceof UnableToApplyEventException)
     {
       status = Status.INTERNAL_SERVER_ERROR;
     }

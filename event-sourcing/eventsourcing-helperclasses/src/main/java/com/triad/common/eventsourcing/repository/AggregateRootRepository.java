@@ -1,18 +1,18 @@
 package com.triad.common.eventsourcing.repository;
 
+import com.triad.common.eventsourcing.Event;
+import com.triad.common.eventsourcing.aggregateroot.AggregateRoot;
+import com.triad.common.eventsourcing.aggregateroot.UnableToApplyEventException;
+import com.triad.common.eventsourcing.eventstore.IEventStore;
+import com.triad.common.eventsourcing.eventstore.RetrieveFailedException;
+import com.triad.common.eventsourcing.eventstore.SaveFailedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.triad.common.eventsourcing.Event;
-import com.triad.common.eventsourcing.aggregateroot.AggregateRoot;
-import com.triad.common.eventsourcing.eventstore.IEventStore;
-import com.triad.common.eventsourcing.eventstore.RetrieveFailedException;
-import com.triad.common.eventsourcing.eventstore.SaveFailedException;
 
 public abstract class AggregateRootRepository<R extends AggregateRoot>
 {
@@ -53,7 +53,7 @@ public abstract class AggregateRootRepository<R extends AggregateRoot>
         return Optional.empty();
       }
     }
-    catch (IllegalAccessException | InstantiationException | NoSuchMethodException | InvocationTargetException e)
+    catch (UnableToApplyEventException | IllegalAccessException | InstantiationException | NoSuchMethodException | InvocationTargetException e)
     {
       throw new RetrieveFailedException(e);
     }

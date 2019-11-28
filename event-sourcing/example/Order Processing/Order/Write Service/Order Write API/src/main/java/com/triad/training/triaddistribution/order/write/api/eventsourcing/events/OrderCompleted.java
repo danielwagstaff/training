@@ -7,7 +7,6 @@ import java.util.UUID;
 public class OrderCompleted extends Event
 {
   private static final long serialVersionUID = 1L;
-  private UUID orderId;
 
   public OrderCompleted()
   {
@@ -21,11 +20,11 @@ public class OrderCompleted extends Event
 
   public UUID getOrderId()
   {
-    return orderId;
+    return getAggregateRootId();
   }
 
   public void setOrderId(UUID orderId)
   {
-    this.orderId = orderId;
+    setAggregateRootId(orderId);
   }
 }

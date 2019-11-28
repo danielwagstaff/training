@@ -8,7 +8,6 @@ import java.util.UUID;
 public class SuspensionCleared extends Event
 {
   private static final long serialVersionUID = 1L;
-  private UUID orderId;
   private Reason suspensionReason;
 
   public SuspensionCleared()
@@ -24,12 +23,12 @@ public class SuspensionCleared extends Event
 
   public UUID getOrderId()
   {
-    return orderId;
+    return getAggregateRootId();
   }
 
   public void setOrderId(UUID orderId)
   {
-    this.orderId = orderId;
+    setAggregateRootId(orderId);
   }
 
   public Reason getSuspensionReason()

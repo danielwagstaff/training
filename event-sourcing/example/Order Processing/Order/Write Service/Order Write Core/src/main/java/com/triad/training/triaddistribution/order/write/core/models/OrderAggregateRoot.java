@@ -2,6 +2,7 @@ package com.triad.training.triaddistribution.order.write.core.models;
 
 import com.triad.common.eventsourcing.Event;
 import com.triad.common.eventsourcing.aggregateroot.AggregateRoot;
+import com.triad.common.eventsourcing.aggregateroot.UnableToApplyEventException;
 import com.triad.common.eventsourcing.preprocessor.processor.AggregateRootCommand;
 import com.triad.training.triaddistribution.order.write.api.domain.events.OrderCompletedDomainEvent;
 import com.triad.training.triaddistribution.order.write.api.domain.models.Product;
@@ -12,7 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class OrderAggregateRoot extends AggregateRoot
@@ -39,7 +42,7 @@ public class OrderAggregateRoot extends AggregateRoot
   }
 
   @AggregateRootCommand(raisesEvents = { OrderCreated.class })
-  public OrderAggregateRoot(UUID id, UUID creatorId, UUID customerId)
+  public OrderAggregateRoot(UUID id, UUID creatorId, UUID customerId) throws UnableToApplyEventException
   {
     Event event = new OrderCreated(id, creatorId, customerId);
     this.applyChange(event);
@@ -128,7 +131,8 @@ public class OrderAggregateRoot extends AggregateRoot
 
   @AggregateRootCommand(raisesEvents = { OrderCompleted.class })
   public void completeOrder(UUID requestorId, EventPublishService eventPublishService) throws
-                                                                                       InvalidCommandRequestException
+                                                                                       InvalidCommandRequestException,
+                                                                                       UnableToApplyEventException
   {
     if (!orderClosed)
     {
@@ -172,7 +176,7 @@ public class OrderAggregateRoot extends AggregateRoot
   }
 
   @AggregateRootCommand(raisesEvents = { OrderCancelled.class })
-  public void cancelOrder(UUID requestorId) throws InvalidCommandRequestException
+  public void cancelOrder(UUID requestorId) throws InvalidCommandRequestException, UnableToApplyEventException
   {
     if (!orderClosed)
     {
@@ -197,7 +201,8 @@ public class OrderAggregateRoot extends AggregateRoot
                                          ProductNonExistenceConfirmed.class,
                                          OrderSuspended.class })
   public void addProductToOrder(UUID productId, int quantity, ProductService productService) throws
-                                                                                             InvalidCommandRequestException
+                                                                                             InvalidCommandRequestException,
+                                                                                             UnableToApplyEventException
   {
     if (!orderClosed)
     {
@@ -235,7 +240,9 @@ public class OrderAggregateRoot extends AggregateRoot
   @AggregateRootCommand(raisesEvents = { ProductExistenceConfirmed.class,
                                          ProductNonExistenceConfirmed.class,
                                          OrderSuspended.class })
-  public void reQueryProducts(ProductService productService) throws InvalidCommandRequestException
+  public void reQueryProducts(ProductService productService) throws
+                                                             InvalidCommandRequestException,
+                                                             UnableToApplyEventException
   {
     if (!orderClosed)
     {
@@ -270,7 +277,7 @@ public class OrderAggregateRoot extends AggregateRoot
   }
 
   @AggregateRootCommand(raisesEvents = { SuspensionCleared.class })
-  public void attemptToRemoveSuspensions() throws InvalidCommandRequestException
+  public void attemptToRemoveSuspensions() throws InvalidCommandRequestException, UnableToApplyEventException
   {
     if (!suspendedReasons.isEmpty())
     {

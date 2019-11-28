@@ -7,7 +7,6 @@ import java.util.UUID;
 public class OrderCancelled extends Event
 {
   private static final long serialVersionUID = 1L;
-  private UUID orderId;
 
   public OrderCancelled()
   {
@@ -21,11 +20,11 @@ public class OrderCancelled extends Event
 
   public UUID getOrderId()
   {
-    return orderId;
+    return getAggregateRootId();
   }
 
   public void setOrderId(UUID orderId)
   {
-    this.orderId = orderId;
+    setAggregateRootId(orderId);
   }
 }

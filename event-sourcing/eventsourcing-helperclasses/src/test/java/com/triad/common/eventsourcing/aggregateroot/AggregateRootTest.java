@@ -4,7 +4,6 @@ import com.triad.common.eventsourcing.Event;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -40,7 +39,7 @@ public class AggregateRootTest
       aggregateRoot.rehydrate(hydratingEvents);
       assertEquals(0, aggregateRoot.getUncommittedChanges().size());
     }
-    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    catch (UnableToApplyEventException e)
     {
       fail(e.getMessage());
     }
@@ -58,7 +57,7 @@ public class AggregateRootTest
       aggregateRoot.rehydrate(hydratingEvents);
       assertEquals(hydratingEvents.size(), aggregateRoot.numberOfTimesDetectableEventReceived);
     }
-    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    catch (UnableToApplyEventException e)
     {
       fail(e.getMessage());
     }
@@ -76,7 +75,7 @@ public class AggregateRootTest
       aggregateRoot.fakeCmdRaisesGivenEvents(events);
       assertEquals(events.size(), aggregateRoot.numberOfTimesDetectableEventReceived);
     }
-    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    catch (UnableToApplyEventException e)
     {
       fail(e.getMessage());
     }
@@ -99,7 +98,7 @@ public class AggregateRootTest
       aggregateRoot.fakeCmdRaisesGivenEvents(events);
       assertEquals(events.size() + hydratingEvents.size(), aggregateRoot.numberOfTimesDetectableEventReceived);
     }
-    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    catch (UnableToApplyEventException e)
     {
       fail(e.getMessage());
     }
@@ -121,7 +120,7 @@ public class AggregateRootTest
       aggregateRoot.rehydrate(hydratingEvents);
       assertEquals(100L, aggregateRoot.getLastStoredStreamPosition());
     }
-    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    catch (UnableToApplyEventException e)
     {
       fail(e.getMessage());
     }
@@ -141,7 +140,7 @@ public class AggregateRootTest
       int numUncommittedChanges = aggregateRoot.getUncommittedChanges().size();
       assertEquals(2, numUncommittedChanges);
     }
-    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    catch (UnableToApplyEventException e)
     {
       fail(e.getMessage());
     }
@@ -163,7 +162,7 @@ public class AggregateRootTest
       assertEquals(2, numUncommittedChangesBefore);
       assertEquals(0, numUncommittedChangesAfter);
     }
-    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    catch (UnableToApplyEventException e)
     {
       fail(e.getMessage());
     }
@@ -180,7 +179,7 @@ public class AggregateRootTest
       aggregateRoot.fakeCmdRaisesGivenEvents(events);
       fail("Exception should have been thrown");
     }
-    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    catch (UnableToApplyEventException e)
     {
       /* Exception thrown as expected */
     }
@@ -216,10 +215,7 @@ public class AggregateRootTest
 
     /* Command Handlers --------------------------------------------------------------------------------------------- */
 
-    void fakeCmdRaisesGivenEvents(List<Event> events) throws
-                                                      NoSuchMethodException,
-                                                      IllegalAccessException,
-                                                      InvocationTargetException
+    void fakeCmdRaisesGivenEvents(List<Event> events) throws UnableToApplyEventException
     {
       for (Event event : events)
       {

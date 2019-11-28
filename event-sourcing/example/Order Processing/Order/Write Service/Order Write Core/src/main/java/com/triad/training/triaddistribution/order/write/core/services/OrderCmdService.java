@@ -1,7 +1,8 @@
 package com.triad.training.triaddistribution.order.write.core.services;
 
-import com.triad.common.eventsourcing.CommandHandler;
-import com.triad.common.eventsourcing.eventstore.AggregateNotFoundException;
+import com.triad.common.eventsourcing.aggregateroot.UnableToApplyEventException;
+import com.triad.common.eventsourcing.command.AggregateNotFoundException;
+import com.triad.common.eventsourcing.command.CommandHandler;
 import com.triad.common.eventsourcing.eventstore.RetrieveFailedException;
 import com.triad.common.eventsourcing.eventstore.SaveFailedException;
 import com.triad.training.triaddistribution.order.write.api.domain.commands.*;
@@ -35,7 +36,7 @@ public class OrderCmdService implements CommandHandler
     this.eventPublishService = eventPublishService;
   }
 
-  public UUID cmd(CreateNewOrder createNewOrder) throws SaveFailedException
+  public UUID cmd(CreateNewOrder createNewOrder) throws SaveFailedException, UnableToApplyEventException
   {
     LOGGER.info("Command Create New Order");
 
@@ -51,7 +52,8 @@ public class OrderCmdService implements CommandHandler
                                                RetrieveFailedException,
                                                SaveFailedException,
                                                InvalidCommandRequestException,
-                                               AggregateNotFoundException
+                                               AggregateNotFoundException,
+                                               UnableToApplyEventException
   {
     LOGGER.info("Command Complete Order");
 
@@ -72,7 +74,8 @@ public class OrderCmdService implements CommandHandler
                                            RetrieveFailedException,
                                            SaveFailedException,
                                            InvalidCommandRequestException,
-                                           AggregateNotFoundException
+                                           AggregateNotFoundException,
+                                           UnableToApplyEventException
   {
     LOGGER.info("Command Cancel Order");
 
@@ -93,7 +96,8 @@ public class OrderCmdService implements CommandHandler
                                                        RetrieveFailedException,
                                                        SaveFailedException,
                                                        InvalidCommandRequestException,
-                                                       AggregateNotFoundException
+                                                       AggregateNotFoundException,
+                                                       UnableToApplyEventException
   {
     LOGGER.info("Command Add Product to Order");
     Optional<OrderAggregateRoot> optOrder = orderRepository.findById(addProductToOrder.getOrderId());
@@ -113,7 +117,8 @@ public class OrderCmdService implements CommandHandler
                                                                          RetrieveFailedException,
                                                                          SaveFailedException,
                                                                          InvalidCommandRequestException,
-                                                                         AggregateNotFoundException
+                                                                         AggregateNotFoundException,
+                                                                         UnableToApplyEventException
   {
     LOGGER.info("Command Remove Suspension From Order");
     Optional<OrderAggregateRoot> optOrder = orderRepository.findById(removeSuspensionsFromOrder.getOrderId());
@@ -133,7 +138,8 @@ public class OrderCmdService implements CommandHandler
                                                    RetrieveFailedException,
                                                    SaveFailedException,
                                                    InvalidCommandRequestException,
-                                                   AggregateNotFoundException
+                                                   AggregateNotFoundException,
+                                                   UnableToApplyEventException
   {
     LOGGER.info("Command Re-query products");
     Optional<OrderAggregateRoot> optOrder = orderRepository.findById(requeryProducts.getOrderId());

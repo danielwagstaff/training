@@ -23,10 +23,7 @@ public abstract class AggregateRoot implements Serializable
 
   public abstract UUID getId();
 
-  public final void rehydrate(List<Event> events) throws
-                                                  NoSuchMethodException,
-                                                  IllegalAccessException,
-                                                  InvocationTargetException
+  public final void rehydrate(List<Event> events) throws UnableToApplyEventException
   {
     for (Event event : events)
     {
@@ -50,28 +47,29 @@ public abstract class AggregateRoot implements Serializable
     return lastStoredStreamPosition;
   }
 
-  protected final void applyChange(final Event event) throws
-                                                      NoSuchMethodException,
-                                                      IllegalAccessException,
-                                                      InvocationTargetException
+  protected final void applyChange(final Event event) throws UnableToApplyEventException
   {
     applyChange(event, true);
   }
 
-  private void applyChange(final Event event, final boolean isNew) throws
-                                                                   NoSuchMethodException,
-                                                                   IllegalAccessException,
-                                                                   InvocationTargetException
+  private void applyChange(final Event event, final boolean isNew) throws UnableToApplyEventException
   {
-    Method whenMethod = this.getClass().getDeclaredMethod("when", event.getClass());
-    whenMethod.setAccessible(true);
-    whenMethod.invoke(this, event);
-    if (isNew)
+    try
     {
-      synchronized (uncommittedChanges)
+      Method whenMethod = this.getClass().getDeclaredMethod("when", event.getClass());
+      whenMethod.setAccessible(true);
+      whenMethod.invoke(this, event);
+      if (isNew)
       {
-        uncommittedChanges.add(event);
+        synchronized (uncommittedChanges)
+        {
+          uncommittedChanges.add(event);
+        }
       }
+    }
+    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+    {
+      throw new UnableToApplyEventException(e);
     }
   }
 }

@@ -2,10 +2,10 @@ package com.triad.training.triaddistribution.order.read.core.services;
 
 import com.triad.common.eventsourcing.eventstore.IEventStore;
 import com.triad.common.eventsourcing.eventstore.RetrieveFailedException;
-import com.triad.training.triaddistribution.order.read.api.dto.OrderDto;
-import com.triad.training.triaddistribution.order.write.api.eventsourcing.events.OrderCreated;
 import com.triad.training.triaddistribution.order.read.api.dto.CustomerId;
+import com.triad.training.triaddistribution.order.read.api.dto.OrderDto;
 import com.triad.training.triaddistribution.order.read.api.dto.OrderId;
+import com.triad.training.triaddistribution.order.write.api.eventsourcing.events.OrderCreated;
 import com.triad.training.triaddistribution.order.write.api.eventsourcing.events.ProductAddedToOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,34 +56,22 @@ public class OrderQueryService
   {
     LOGGER.info("Retrieving Order");
 
-    return eventStore.retrieveAllEvents().stream().filter(event -> {
-      boolean correctId;
-      if (event instanceof OrderCreated)  //TODO: for this reason, Event should contain the ID
-      {
-        correctId = ((OrderCreated) event).getOrderId().equals(orderId);
-      }
-      else if (event instanceof ProductAddedToOrder)
-      {
-        correctId = ((ProductAddedToOrder) event).getOrderId().equals(orderId);
-      }
-      else
-      {
-        correctId = false;
-      }
-      return correctId;
-    }).reduce(new OrderDto(), (accOrderDto, event) -> {
-      if (event instanceof OrderCreated)
-      {
-        accOrderDto.setOrderId(((OrderCreated) event).getOrderId());
-      }
-      else if(event instanceof ProductAddedToOrder)
-      {
-        accOrderDto.addProductId(((ProductAddedToOrder) event).getProductId());
-      }
-      return accOrderDto;
-    }, (orderDto1, orderDto2) -> {
-      orderDto1.getProductIds().addAll(orderDto2.getProductIds());
-      return orderDto1;
-    });
+    return eventStore.retrieveAllEvents()
+                     .stream()
+                     .filter(event -> event.getAggregateRootId().equals(orderId))
+                     .reduce(new OrderDto(), (accOrderDto, event) -> {
+                       if (event instanceof OrderCreated)
+                       {
+                         accOrderDto.setOrderId(((OrderCreated) event).getOrderId());
+                       }
+                       else if (event instanceof ProductAddedToOrder)
+                       {
+                         accOrderDto.addProductId(((ProductAddedToOrder) event).getProductId());
+                       }
+                       return accOrderDto;
+                     }, (orderDto1, orderDto2) -> {
+                       orderDto1.getProductIds().addAll(orderDto2.getProductIds());
+                       return orderDto1;
+                     });
   }
 }
