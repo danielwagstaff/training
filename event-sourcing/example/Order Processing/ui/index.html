@@ -1,0 +1,402 @@
+<html>
+
+<head>
+	<title>Demonstration</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+	<style>
+		.control {
+			margin: 1vw;
+			padding: 1vw;
+			box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+		}
+
+		.service {
+			height: 80vh;
+			overflow: auto;
+			margin: 1vw;
+			box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+		}
+
+		.service-view {
+			height: 20vh;
+			overflow: auto;
+			margin-top: 1vh;
+			margin-bottom: 1vh;
+		}
+
+		.services-view {
+			height: 40vh;
+			overflow: auto;
+			overflow-y: hidden;
+		}
+
+		.pic-view {
+			height: 35vh;
+			overflow: auto;
+		}
+
+		img {
+			max-height: 30vh;
+			max-width: 100%;
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+		}
+
+		#command-window {
+			position: fixed;
+			top: 12vh;
+			width: 50vw;
+			height: 88vh;
+			background: rgba(0, 0, 0, 0.5);
+			display: none;
+		}
+
+		#command-window iframe {
+			position: relative;
+			top: 5%;
+			left: 5%;
+			width: 90%;
+			height: 90%;
+		}
+		
+	</style>
+</head>
+
+<body>
+	<title>Demonstration</title>
+
+	<div class="w3-container control">
+		<div class="w3-container w3-col s3 w3-bar">
+			<button id="btn-polling-pause" class="w3-bar-item w3-btn" onclick="togglePolling()">Polling</button>
+		</div>
+		<div class="w3-col s9 w3-bar">
+			<div class="w3-container w3-col s2 w3-bar">
+				<button id="btn-command-window-show" class="w3-bar-item w3-btn w3-black" onclick="toggleCommandWindow()">API Show</button>
+			</div>
+			<div class="w3-container w3-col s2 w3-bar">
+				<button id="btn-command-window-select-left" class="w3-bar-item w3-btn" onclick="selectCommandWindowSide('left')">Left</button>
+				<button id="btn-command-window-select-right" class="w3-bar-item w3-btn" onclick="selectCommandWindowSide('right')">Right</button>
+			</div>
+			<div class="w3-container w3-col s8 w3-bar">
+				<button id="btn-command-window-orders-cmd" class="w3-bar-item w3-btn" onclick="selectCommandWindow('orders-cmd')">Orders (Command)</button>
+				<button id="btn-command-window-orders-query" class="w3-bar-item w3-btn" onclick="selectCommandWindow('orders-query')">Orders (Query)</button>
+				<button id="btn-command-window-completed" class="w3-bar-item w3-btn" onclick="selectCommandWindow('completed')">Completed Process</button>
+				<button id="btn-command-window-products" class="w3-bar-item w3-btn" onclick="selectCommandWindow('products')">Products</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="w3-half">
+
+		<div class="w3-container w3-half service">
+			<h1>Products</h1>
+			<div>
+				<img src="product-service.png"></img>
+			</div>
+			<h5>All Products
+				<span id="all-products-count"></span>
+			</h5>
+			<div class="service-view">
+				<table class="w3-table w3-striped w3-hoverable">
+					<tbody id="all-products"></tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="w3-container w3-rest service">
+			<h1>Orders</h1>
+			<div>
+				<img src="order-service.png"></img>
+			</div>
+			<h5>All Orders
+				<span id="all-orders-count"></span>
+			</h5>
+			<div class="service-view">
+				<table class="w3-table w3-striped w3-hoverable">
+					<tbody id="all-orders"></tbody>
+				</table>
+			</div>
+			<h5>Products</h5>
+			<div class="service-view">
+				<table class="w3-table w3-striped w3-hoverable">
+					<tbody id="single-order"></tbody>
+				</table>
+			</div>
+		</div>
+
+	</div>
+
+	<div class="w3-half">
+
+		<div class="w3-container w3-half service">
+			<h1>Kafka</h1>
+			<div>
+				<img src="kafka.png"></img>
+			</div>
+			<h5>Message Stream</h5>
+			<div class="service-view">
+				<table class="w3-table w3-striped w3-hoverable">
+					<tbody id="all-messages"></tbody>
+				</table>
+			</div>
+			<h5>Products</h5>
+			<div class="service-view">
+				<table class="w3-table w3-striped w3-hoverable">
+					<tbody id="message-products"></tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="w3-container w3-rest service">
+			<h1>Completed Orders</h1>
+			<div>
+				<img src="process-service.png"></img>
+			</div>
+			<h5>All Completed Orders
+				<span id="all-completedorders-count"></span>
+			</h5>
+			<div class="service-view">
+				<table class="w3-table w3-striped w3-hoverable">
+					<tbody id="all-completedorders"></tbody>
+				</table>
+			</div>
+		</div>
+
+	</div>
+
+	<div id="command-window">
+		<iframe src="http://localhost:7300/swagger-ui"></iframe>
+		
+	</div>
+</body>
+
+</html>
+
+<script>
+
+	document.addEventListener('DOMContentLoaded', function () {
+		poll('all-orders', 'http://localhost:7100/orders', displayOrders);
+		poll('all-products', 'http://localhost:7200/products', displayProducts);
+		poll('all-completedorders', 'http://localhost:7300/orders/completed', displayCompletedOrders);
+		(function () {
+			if (!!window.EventSource) {
+				var source = new EventSource('http://localhost:7100/orders/stream-order');
+
+				source.addEventListener('message', function (e) {
+					displayEventBusMessage(e.data);
+				}, false);
+
+				source.addEventListener('open', function (e) {
+					console.log("SSE Stream Opened");
+				}, false);
+
+				source.addEventListener('error', function (e) {
+					if (e.readyState == EventSource.CLOSED) {
+						console.error("Error: " + e);
+						console.log("SSE Stream Closed");
+					}
+				}, false);
+			} else {
+				console.error("Browser does not support Server Sent Events")
+			}
+		})();
+	}, false);
+
+	let pollingPaused = false;
+	let togglePolling = function () {
+		pollingPaused = pollingPaused ? false : true;
+		if (pollingPaused) {
+			document.getElementById('btn-polling-pause').textContent = "Polling Paused";
+			document.getElementById("btn-polling-pause").classList.add("w3-light-grey");
+			document.getElementById("btn-polling-pause").classList.remove("w3-teal");
+		} else {
+			document.getElementById('btn-polling-pause').textContent = "Polling";
+			document.getElementById("btn-polling-pause").classList.remove("w3-light-grey");
+			document.getElementById("btn-polling-pause").classList.add("w3-teal");
+		}
+	}
+	togglePolling();
+
+	let fetchAndPopulate = function (targetElementId, url, displayer) {
+		var xmlHttp = new XMLHttpRequest();
+		const asyncReq = true;
+		xmlHttp.open("GET", url, asyncReq);
+		xmlHttp.onload = function (e) {
+			if (xmlHttp.readyState === 4) {
+				if (xmlHttp.status === 200) {
+					displayer(xmlHttp.responseText);
+				} else {
+					document.getElementById(targetElementId).innerHTML = "NOK: " + xmlHttp.statusText;
+				}
+			}
+		};
+		xmlHttp.onerror = function (e) {
+			document.getElementById(targetElementId).innerHTML = "ERROR!";
+		};
+		xmlHttp.send(null);
+	}
+
+	let poll = function (targetElementId, url, displayer) {
+		document.getElementById(targetElementId).innerHTML = "LOADING...";
+		setInterval(function () {
+			if (!pollingPaused) {
+				fetchAndPopulate(targetElementId, url, displayer);
+			}
+		}, 1000);
+	}
+
+	let displaySingleOrder = function (strOrder) {
+		let order = JSON.parse(strOrder);
+		document.getElementById("single-order").innerHTML = "";
+		if (order['productIds'].length === 0) {
+			let tBody = document.getElementById("single-order");
+			let row = tBody.insertRow();
+			let cell = row.insertCell();
+			cell.innerHTML = "None";
+		} else {
+			order['productIds'].forEach(function (productId) {
+				let tBody = document.getElementById("single-order");
+				let row = tBody.insertRow();
+				let cell = row.insertCell();
+				cell.innerHTML = productId;
+			});
+		}
+	}
+
+	let displayOrders = function (strOrders) {
+		let orders = JSON.parse(strOrders);
+		document.getElementById("all-orders-count").innerHTML = "(" + orders.length + ")";
+		document.getElementById("all-orders").innerHTML = "";
+		orders.forEach(function (order) {
+			let tBody = document.getElementById("all-orders");
+			let row = tBody.insertRow();
+			let cell = row.insertCell();
+			cell.innerHTML = order['orderId'];
+			cell.removeAttribute("onclick");
+			cell.onclick = function () {
+				fetchAndPopulate('single-order', 'http://localhost:7100/orders/' + order['orderId'], displaySingleOrder);
+			};
+		});
+	}
+
+	let displayProducts = function (strProducts) {
+		let products = JSON.parse(strProducts)[""];
+		document.getElementById("all-products-count").innerHTML = "(" + products.length + ")";
+		document.getElementById("all-products").innerHTML = "";
+		products.forEach(function (product) {
+			let tBody = document.getElementById("all-products");
+			let row = tBody.insertRow();
+			let cell = row.insertCell();
+			cell.innerHTML = product;
+		});
+	}
+
+	let displayCompletedOrders = function (strCompletedorders) {
+		let completedorders = JSON.parse(strCompletedorders);
+		document.getElementById("all-completedorders-count").innerHTML = "(" + completedorders.length + ")";
+		document.getElementById("all-completedorders").innerHTML = "";
+		completedorders.forEach(function (completedOrder) {
+			let tBody = document.getElementById("all-completedorders");
+			let row = tBody.insertRow();
+			let cellId = row.insertCell();
+			cellId.innerHTML = completedOrder['orderId'];
+			let cellState = row.insertCell();
+			cellState.innerHTML = completedOrder['state'].replace(/_/g, '-'); //replace _ with - to allow text wrapping
+		});
+	}
+
+	let displayEventBusMessage = function (data) {
+		const message = JSON.parse(data);
+		console.log(message);
+		console.log(message.orderId);
+		console.log(message.completedById);
+		console.log(message.products);
+
+		let tBody = document.getElementById("all-messages");
+		let row = tBody.insertRow(0);
+		let cell = row.insertCell();
+		cell.innerHTML = message['orderId'];
+		cell.removeAttribute("onclick");
+		cell.onclick = function () {
+			const products = message['products'];
+			document.getElementById("message-products").innerHTML = "";
+			if (message['products'].length === 0) {
+				let tBody = document.getElementById("message-products");
+				let row = tBody.insertRow();
+				let cell = row.insertCell();
+				cell.innerHTML = "None";
+			} else {
+				message['products'].forEach(function (productRequest) {
+					let tBody = document.getElementById("message-products");
+					let row = tBody.insertRow();
+					let cell = row.insertCell();
+					cell.innerHTML = productRequest['quantity'] + " x " + productRequest['productId'];
+				});
+			}
+		};
+	}
+
+	let toggleCommandWindow = function () {
+		if (document.getElementById("command-window").style.display === "none") {
+			document.getElementById("command-window").style.display = "block";
+			document.getElementById("btn-command-window-show").textContent = "API Hide";
+		} else {
+			document.getElementById("command-window").style.display = "none";
+			document.getElementById("btn-command-window-show").textContent = "API Show";
+		}
+	};
+	toggleCommandWindow();
+
+	let selectCommandWindowSide = function (side) {
+		if (side === "left") {
+			document.getElementById("btn-command-window-select-left").classList.remove("w3-light-grey");
+			document.getElementById("btn-command-window-select-left").classList.add("w3-teal");
+			document.getElementById("btn-command-window-select-right").classList.add("w3-light-grey");
+
+			document.getElementById("command-window").style.left = 0;
+			document.getElementById("command-window").style.right = "";
+		} else {
+			document.getElementById("btn-command-window-select-right").classList.remove("w3-light-grey");
+			document.getElementById("btn-command-window-select-right").classList.add("w3-teal");
+			document.getElementById("btn-command-window-select-left").classList.add("w3-light-grey");
+
+			document.getElementById("command-window").style.left = "";
+			document.getElementById("command-window").style.right = 0;
+		}
+	};
+	selectCommandWindowSide("right");
+
+	let selectCommandWindow = function (service) {
+		document.getElementById("btn-command-window-orders-cmd").classList.remove("w3-teal");
+		document.getElementById("btn-command-window-orders-query").classList.remove("w3-teal");
+		document.getElementById("btn-command-window-completed").classList.remove("w3-teal");
+		document.getElementById("btn-command-window-products").classList.remove("w3-teal");
+		document.getElementById("btn-command-window-orders-cmd").classList.add("w3-light-grey");
+		document.getElementById("btn-command-window-orders-query").classList.add("w3-light-grey");
+		document.getElementById("btn-command-window-completed").classList.add("w3-light-grey");
+		document.getElementById("btn-command-window-products").classList.add("w3-light-grey");
+
+		let commandWindowPage = document.getElementById("command-window").getElementsByTagName("iframe")[0];
+		if (service === 'orders-cmd') {
+			commandWindowPage.src = "http://localhost:7000/swagger-ui";
+			document.getElementById("btn-command-window-orders-cmd").classList.remove("w3-light-grey");
+			document.getElementById("btn-command-window-orders-cmd").classList.add("w3-teal");
+		} else if (service === 'orders-query') {
+			commandWindowPage.src = "http://localhost:7100/swagger-ui";
+			document.getElementById("btn-command-window-orders-query").classList.remove("w3-light-grey");
+			document.getElementById("btn-command-window-orders-query").classList.add("w3-teal");
+		} else if (service === 'completed') {
+			commandWindowPage.src = "http://localhost:7300/swagger-ui";
+			document.getElementById("btn-command-window-completed").classList.remove("w3-light-grey");
+			document.getElementById("btn-command-window-completed").classList.add("w3-teal");
+		} else if (service === 'products') {
+			commandWindowPage.src = "http://localhost:7200/swagger-ui";
+			document.getElementById("btn-command-window-products").classList.remove("w3-light-grey");
+			document.getElementById("btn-command-window-products").classList.add("w3-teal");
+		}
+	};
+	selectCommandWindow("orders-cmd");
+
+</script>

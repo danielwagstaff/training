@@ -1,0 +1,1 @@
+cqlsh < /home/create.cql
