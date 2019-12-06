@@ -60,7 +60,6 @@
 			width: 90%;
 			height: 90%;
 		}
-		
 	</style>
 </head>
 
@@ -102,6 +101,21 @@
 				<table class="w3-table w3-striped w3-hoverable">
 					<tbody id="all-products"></tbody>
 				</table>
+			</div>
+
+			<div class="service-view">
+				<div class="w3-half">
+					<h5>Avail.</h5>
+					<table class="w3-table w3-striped w3-hoverable">
+						<tbody id="product-available"></tbody>
+					</table>
+				</div>
+				<div class="w3-half">
+					<h5>Res'd</h5>
+					<table class="w3-table w3-striped w3-hoverable">
+						<tbody id="product-reserved"></tbody>
+					</table>
+				</div>
 			</div>
 		</div>
 
@@ -168,7 +182,7 @@
 
 	<div id="command-window">
 		<iframe src="http://localhost:7300/swagger-ui"></iframe>
-		
+
 	</div>
 </body>
 
@@ -236,7 +250,26 @@
 			document.getElementById(targetElementId).innerHTML = "ERROR!";
 		};
 		xmlHttp.send(null);
-	}
+	};
+
+	let fetchAndPopulateWithDisplayerArgs = function (targetElementId, url, displayer, displayerArgs) {
+		var xmlHttp = new XMLHttpRequest();
+		const asyncReq = true;
+		xmlHttp.open("GET", url, asyncReq);
+		xmlHttp.onload = function (e) {
+			if (xmlHttp.readyState === 4) {
+				if (xmlHttp.status === 200) {
+					displayer(xmlHttp.responseText, displayerArgs);
+				} else {
+					document.getElementById(targetElementId).innerHTML = "NOK: " + xmlHttp.statusText;
+				}
+			}
+		};
+		xmlHttp.onerror = function (e) {
+			document.getElementById(targetElementId).innerHTML = "ERROR!";
+		};
+		xmlHttp.send(null);
+	};
 
 	let poll = function (targetElementId, url, displayer) {
 		document.getElementById(targetElementId).innerHTML = "LOADING...";
@@ -245,7 +278,7 @@
 				fetchAndPopulate(targetElementId, url, displayer);
 			}
 		}, 1000);
-	}
+	};
 
 	let displaySingleOrder = function (strOrder) {
 		let order = JSON.parse(strOrder);
@@ -263,7 +296,30 @@
 				cell.innerHTML = productId;
 			});
 		}
-	}
+	};
+
+	let displayProductAvailable = function (strProduct) {
+		let product = JSON.parse(strProduct);
+		document.getElementById("product-available").innerHTML = "";
+		let tBody = document.getElementById("product-available");
+		let row = tBody.insertRow();
+		let cell = row.insertCell();
+		cell.innerHTML = product['quantity'];
+	};
+
+	let displayProductReserved = function (strProductReservation, productId) {
+		let productReservations = JSON.parse(strProductReservation);
+		document.getElementById("product-reserved").innerHTML = "";
+		let tBody = document.getElementById("product-reserved");
+		let row = tBody.insertRow();
+		let cell = row.insertCell();
+		cell.innerHTML = "None";
+		productReservations.forEach(function (productReservation) {
+			if (productReservation['productId'] === productId) {
+				cell.innerHTML = productReservation['quantity'];
+			}
+		});
+	};
 
 	let displayOrders = function (strOrders) {
 		let orders = JSON.parse(strOrders);
@@ -279,7 +335,7 @@
 				fetchAndPopulate('single-order', 'http://localhost:7100/orders/' + order['orderId'], displaySingleOrder);
 			};
 		});
-	}
+	};
 
 	let displayProducts = function (strProducts) {
 		let products = JSON.parse(strProducts)[""];
@@ -290,8 +346,13 @@
 			let row = tBody.insertRow();
 			let cell = row.insertCell();
 			cell.innerHTML = product;
+			cell.removeAttribute("onclick");
+			cell.onclick = function () {
+				fetchAndPopulate('product-available', 'http://localhost:7200/products/' + product, displayProductAvailable);
+				fetchAndPopulateWithDisplayerArgs('product-available', 'http://localhost:7200/products/reservations/' + product, displayProductReserved, product);
+			};
 		});
-	}
+	};
 
 	let displayCompletedOrders = function (strCompletedorders) {
 		let completedorders = JSON.parse(strCompletedorders);
@@ -305,7 +366,7 @@
 			let cellState = row.insertCell();
 			cellState.innerHTML = completedOrder['state'].replace(/_/g, '-'); //replace _ with - to allow text wrapping
 		});
-	}
+	};
 
 	let displayEventBusMessage = function (data) {
 		const message = JSON.parse(data);
@@ -336,7 +397,7 @@
 				});
 			}
 		};
-	}
+	};
 
 	let toggleCommandWindow = function () {
 		if (document.getElementById("command-window").style.display === "none") {

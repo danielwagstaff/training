@@ -1,8 +1,9 @@
 package com.triad.training.triaddistribution.product.core.controllers;
 
-import com.triad.training.triaddistribution.product.api.dto.ProductIdDto;
+import com.triad.training.triaddistribution.product.api.dto.ProductDto;
 import com.triad.training.triaddistribution.product.api.dto.ProductReservationDto;
 import com.triad.training.triaddistribution.product.core.services.ProductDoesNotExistException;
+import com.triad.training.triaddistribution.product.core.services.ProductNotAvailableException;
 import com.triad.training.triaddistribution.product.core.services.ProductService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,12 +57,13 @@ public class ProductController
     try
     {
       UUID productIdAsUuid = UUID.fromString(productId);
-      return productService.get(productIdAsUuid).thenApply(optionalProductId -> {
-        if (optionalProductId.isPresent())
+      return productService.get(productIdAsUuid).thenApply(optionalProductQty -> {
+        if (optionalProductQty.isPresent())
         {
-          ProductIdDto productIdDto = new ProductIdDto();
-          productIdDto.setId(optionalProductId.get());
-          return Response.ok(productIdDto).build();
+          ProductDto productDto = new ProductDto();
+          productDto.setId(productIdAsUuid);
+          productDto.setQuantity(optionalProductQty.get());
+          return Response.ok(productDto).build();
         }
         else
         {
@@ -77,24 +79,17 @@ public class ProductController
 
   @POST()
   @Path("")
-  public CompletionStage<Response> addProduct(ProductIdDto productIdDto)
+  public CompletionStage<Response> addProduct(ProductDto productDto)
   {
     LOGGER.info("POST Add Product");
-    return CompletableFuture.supplyAsync(() -> {
-      try
-      {
-        return Response.ok(productService.addProduct(productIdDto.getId())).build();
-      }
-      catch (Exception e)
-      {
-        return Response.serverError().build();
-      }
-    });
+    return CompletableFuture.supplyAsync(() -> Response.ok(productService.addProduct(productDto.getId(),
+                                                                                     productDto.getQuantity()))
+                                                       .build());
   }
 
   @POST()
   @Path("/{productId}/reserve/")
-  public CompletionStage<Response> reserveProduct(@PathParam("productId") String productId, int quantity)
+  public CompletionStage<Response> reserveProduct(@PathParam("productId") String productId, Integer quantity)
   {
     LOGGER.info("POST Reserve Product");
     return CompletableFuture.supplyAsync(() -> {
@@ -107,9 +102,9 @@ public class ProductController
       {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
-      catch (Exception e)
+      catch (ProductNotAvailableException e)
       {
-        return Response.serverError().build();
+        return Response.status(Response.Status.BAD_REQUEST).build();
       }
     });
   }
@@ -119,23 +114,17 @@ public class ProductController
   public CompletionStage<Response> getAllReservations(@PathParam("productId") String productId)
   {
     LOGGER.info("GET All Product Reservations");
-    try
-    {
-      return productService.getAllReservations().thenApply(reservations -> {
-        List<ProductReservationDto> productReservationDtos = reservations.stream()
-                                                                         .filter(prod -> prod.getProductId()
-                                                                                             .equals(UUID.fromString(
-                                                                                                 productId)))
-                                                                         .map(reservation -> new ProductReservationDto(
-                                                                             reservation.getProductId(),
-                                                                             reservation.getQuantity()))
-                                                                         .collect(Collectors.toList());
-        return Response.ok(productReservationDtos).build();
-      });
-    }
-    catch (IllegalArgumentException e)
-    {
-      return CompletableFuture.supplyAsync(() -> Response.status(Response.Status.BAD_REQUEST).build());
-    }
+    return productService.getAllReservations().thenApply(reservations -> {
+      List<ProductReservationDto> productReservationDtos = reservations.entrySet()
+                                                                       .stream()
+                                                                       .filter(prod -> prod.getKey()
+                                                                                           .equals(UUID.fromString(
+                                                                                               productId)))
+                                                                       .map(reservation -> new ProductReservationDto(
+                                                                           reservation.getKey(),
+                                                                           reservation.getValue()))
+                                                                       .collect(Collectors.toList());
+      return Response.ok(productReservationDtos).build();
+    });
   }
 }

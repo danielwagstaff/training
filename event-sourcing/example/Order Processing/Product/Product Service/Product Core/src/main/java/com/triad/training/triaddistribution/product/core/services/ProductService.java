@@ -1,50 +1,54 @@
 package com.triad.training.triaddistribution.product.core.services;
 
-import com.triad.training.triaddistribution.product.core.models.ProductReservation;
-
 import javax.enterprise.context.ApplicationScoped;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 @ApplicationScoped
 public class ProductService
 {
-  private List<UUID> products = new ArrayList<>();
-  private List<ProductReservation> productReservations = new ArrayList<>();
+  private Map<UUID, Integer> productToAvailableQuantity = new HashMap<>();
+  private Map<UUID, Integer> productReservations = new HashMap<>();
 
-  public CompletionStage<List<UUID>> getAll()
+  public CompletionStage<Set<UUID>> getAll()
   {
-    return CompletableFuture.supplyAsync(() -> products);
+    return CompletableFuture.supplyAsync(() -> productToAvailableQuantity.keySet());
   }
 
-  public CompletionStage<Optional<UUID>> get(UUID productId)
+  public CompletionStage<Optional<Integer>> get(UUID productId)
   {
-    return CompletableFuture.supplyAsync(() -> {
-      if (products.contains(productId))
+    return CompletableFuture.supplyAsync(() -> Optional.ofNullable(productToAvailableQuantity.get(productId)));
+  }
+
+  public CompletableFuture<Void> addProduct(UUID productId, int quantity)
+  {
+    return CompletableFuture.runAsync(() -> productToAvailableQuantity.merge(productId,
+                                                                             quantity,
+                                                                             (currentQty, newQty) -> currentQty + newQty));
+  }
+
+  public CompletableFuture<Void> reserveProduct(UUID productId, int reserveQty) throws
+                                                                                ProductDoesNotExistException,
+                                                                                ProductNotAvailableException
+  {
+    Integer currentQty = productToAvailableQuantity.get(productId);
+    if (currentQty != null)
+    {
+      int qtyAfterReservation = currentQty - reserveQty;
+      if (qtyAfterReservation >= 0)
       {
-        return Optional.of(productId);
+        return CompletableFuture.runAsync(() -> {
+          productToAvailableQuantity.replace(productId, qtyAfterReservation);
+          productReservations.merge(productId,
+                                    reserveQty,
+                                    (currentReservedQty, toReserveQty) -> currentReservedQty + toReserveQty);
+        });
       }
       else
       {
-        return Optional.empty();
+        throw new ProductNotAvailableException("Product " + productId + " only has " + currentQty + " available, but attempted to reserve " + reserveQty);
       }
-    });
-  }
-
-  public CompletableFuture<Void> addProduct(UUID productId)
-  {
-    return CompletableFuture.runAsync(() -> products.add(productId));
-  }
-
-  public CompletableFuture<Void> reserveProduct(UUID productId, int qty) throws ProductDoesNotExistException
-  {
-    if (products.contains(productId))
-    {
-      return CompletableFuture.runAsync(() -> productReservations.add(new ProductReservation(productId, qty)));
     }
     else
     {
@@ -52,7 +56,7 @@ public class ProductService
     }
   }
 
-  public CompletionStage<List<ProductReservation>> getAllReservations()
+  public CompletionStage<Map<UUID, Integer>> getAllReservations()
   {
     return CompletableFuture.supplyAsync(() -> productReservations);
   }
