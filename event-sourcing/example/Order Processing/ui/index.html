@@ -53,10 +53,14 @@
 			display: none;
 		}
 
-		#command-window iframe {
+		#command-window div {
 			position: relative;
 			top: 5%;
 			left: 5%;
+		}
+
+		#command-window iframe {
+			position: relative;
 			width: 90%;
 			height: 90%;
 		}
@@ -181,8 +185,10 @@
 	</div>
 
 	<div id="command-window">
-		<iframe src="http://localhost:7300/swagger-ui"></iframe>
-
+		<div>
+			<iframe src="http://localhost:7300/swagger-ui"></iframe>
+		</div>
+		<div id="uuid-generator"></div>
 	</div>
 </body>
 
@@ -194,6 +200,7 @@
 		poll('all-orders', 'http://localhost:7100/orders', displayOrders);
 		poll('all-products', 'http://localhost:7200/products', displayProducts);
 		poll('all-completedorders', 'http://localhost:7300/orders/completed', displayCompletedOrders);
+		poll('uuid-generator', 'https://www.uuidgenerator.net/api/version1', function (text) { document.getElementById('uuid-generator').innerHTML = text });
 		(function () {
 			if (!!window.EventSource) {
 				var source = new EventSource('http://localhost:7100/orders/stream-order');
@@ -277,7 +284,7 @@
 			if (!pollingPaused) {
 				fetchAndPopulate(targetElementId, url, displayer);
 			}
-		}, 1000);
+		}, 2000);
 	};
 
 	let displaySingleOrder = function (strOrder) {
