@@ -195,12 +195,19 @@
 </html>
 
 <script>
+	const poll = function (callable) {
+		setInterval(function () {
+			if (!pollingPaused) {
+				callable();
+			}
+		}, 2000);
+	};
 
 	document.addEventListener('DOMContentLoaded', function () {
-		poll('all-orders', 'http://localhost:7100/orders', displayOrders);
-		poll('all-products', 'http://localhost:7200/products', displayProducts);
-		poll('all-completedorders', 'http://localhost:7300/orders/completed', displayCompletedOrders);
-		poll('uuid-generator', 'https://www.uuidgenerator.net/api/version1', function (text) { document.getElementById('uuid-generator').innerHTML = text });
+		poll(displayGeneratedUuid);
+		poll(displayOrders);
+		poll(displayProducts);
+		poll(displayCompletedOrders);
 		(function () {
 			if (!!window.EventSource) {
 				var source = new EventSource('http://localhost:7100/orders/stream-order');
@@ -240,148 +247,165 @@
 	}
 	togglePolling();
 
-	let fetchAndPopulate = function (targetElementId, url, displayer) {
+	const fetchAndCall = function (url, onSuccess) {
 		var xmlHttp = new XMLHttpRequest();
 		const asyncReq = true;
 		xmlHttp.open("GET", url, asyncReq);
 		xmlHttp.onload = function (e) {
 			if (xmlHttp.readyState === 4) {
-				if (xmlHttp.status === 200) {
-					displayer(xmlHttp.responseText);
-				} else {
-					document.getElementById(targetElementId).innerHTML = "NOK: " + xmlHttp.statusText;
-				}
+				onSuccess(xmlHttp);
 			}
 		};
 		xmlHttp.onerror = function (e) {
-			document.getElementById(targetElementId).innerHTML = "ERROR!";
+			console.error("ERROR calling " + url);
 		};
 		xmlHttp.send(null);
 	};
 
-	let fetchAndPopulateWithDisplayerArgs = function (targetElementId, url, displayer, displayerArgs) {
-		var xmlHttp = new XMLHttpRequest();
-		const asyncReq = true;
-		xmlHttp.open("GET", url, asyncReq);
-		xmlHttp.onload = function (e) {
-			if (xmlHttp.readyState === 4) {
-				if (xmlHttp.status === 200) {
-					displayer(xmlHttp.responseText, displayerArgs);
+	const displayGeneratedUuid = function () {
+		fetchAndCall("https://www.uuidgenerator.net/api/guid",
+			function (response) {
+				if (response.status === 200) {
+					document.getElementById('uuid-generator').innerHTML = response.responseText;
 				} else {
-					document.getElementById(targetElementId).innerHTML = "NOK: " + xmlHttp.statusText;
+					document.getElementById('uuid-generator').innerHTML = "Error (" + response.status + "): Could not retrieve UUID";
 				}
-			}
-		};
-		xmlHttp.onerror = function (e) {
-			document.getElementById(targetElementId).innerHTML = "ERROR!";
-		};
-		xmlHttp.send(null);
-	};
-
-	let poll = function (targetElementId, url, displayer) {
-		document.getElementById(targetElementId).innerHTML = "LOADING...";
-		setInterval(function () {
-			if (!pollingPaused) {
-				fetchAndPopulate(targetElementId, url, displayer);
-			}
-		}, 2000);
-	};
-
-	let displaySingleOrder = function (strOrder) {
-		let order = JSON.parse(strOrder);
-		document.getElementById("single-order").innerHTML = "";
-		if (order['productIds'].length === 0) {
-			let tBody = document.getElementById("single-order");
-			let row = tBody.insertRow();
-			let cell = row.insertCell();
-			cell.innerHTML = "None";
-		} else {
-			order['productIds'].forEach(function (productId) {
-				let tBody = document.getElementById("single-order");
-				let row = tBody.insertRow();
-				let cell = row.insertCell();
-				cell.innerHTML = productId;
 			});
-		}
 	};
 
-	let displayProductAvailable = function (strProduct) {
-		let product = JSON.parse(strProduct);
-		document.getElementById("product-available").innerHTML = "";
-		let tBody = document.getElementById("product-available");
-		let row = tBody.insertRow();
-		let cell = row.insertCell();
-		cell.innerHTML = product['quantity'];
+	const displayOrder = function (orderId) {
+		fetchAndCall("http://localhost:7100/orders/" + orderId,
+			function (response) {
+				if (response.status === 200) {
+					let order = JSON.parse(response.responseText);
+					document.getElementById("single-order").innerHTML = "";
+					if (order['productIds'].length === 0) {
+						let tBody = document.getElementById("single-order");
+						let row = tBody.insertRow();
+						let cell = row.insertCell();
+						cell.innerHTML = "None";
+					} else {
+						order['productIds'].forEach(function (productId) {
+							let tBody = document.getElementById("single-order");
+							let row = tBody.insertRow();
+							let cell = row.insertCell();
+							cell.innerHTML = productId;
+						});
+					}
+				} else {
+					document.getElementById("single-order").innerHTML = response.statusText;
+				}
+			});
 	};
 
-	let displayProductReserved = function (strProductReservation, productId) {
-		let productReservations = JSON.parse(strProductReservation);
-		document.getElementById("product-reserved").innerHTML = "";
-		let tBody = document.getElementById("product-reserved");
-		let row = tBody.insertRow();
-		let cell = row.insertCell();
-		cell.innerHTML = "None";
-		productReservations.forEach(function (productReservation) {
-			if (productReservation['productId'] === productId) {
-				cell.innerHTML = productReservation['quantity'];
+	const displayOrders = function () {
+		fetchAndCall("http://localhost:7100/orders",
+			function (response) {
+				if (response.status === 200) {
+					let orders = JSON.parse(response.responseText);
+					document.getElementById("all-orders-count").innerHTML = "(" + orders.length + ")";
+					document.getElementById("all-orders").innerHTML = "";
+					orders.forEach(function (order) {
+						let tBody = document.getElementById("all-orders");
+						let row = tBody.insertRow();
+						let cell = row.insertCell();
+						cell.innerHTML = order['orderId'];
+						cell.removeAttribute("onclick");
+						cell.onclick = function () {
+							displayOrder(order['orderId']);
+						};
+					});
+				} else {
+					document.getElementById("all-orders-count").innerHTML = "";
+					document.getElementById("all-orders").innerHTML = response.statusText;
+				}
+			});
+	};
+
+	const displayProductAvailable = function (productId) {
+		fetchAndCall("http://localhost:7200/products/" + productId,
+			function (response) {
+				if (response.status === 200) {
+					let product = JSON.parse(response.responseText);
+					document.getElementById("product-available").innerHTML = "";
+					let tBody = document.getElementById("product-available");
+					let row = tBody.insertRow();
+					let cell = row.insertCell();
+					cell.innerHTML = product['quantity'];
+				} else {
+					document.getElementById("product-available").innerHTML = response.statusText;
+				}
+			});
+	};
+
+	const displayProductReserved = function (productId) {
+		fetchAndCall("http://localhost:7200/products/reservations/" + productId,
+			function (response) {
+				if (response.status === 200) {
+					let productReservations = JSON.parse(response.responseText);
+					document.getElementById("product-reserved").innerHTML = "";
+					let tBody = document.getElementById("product-reserved");
+					let row = tBody.insertRow();
+					let cell = row.insertCell();
+					cell.innerHTML = "None";
+					productReservations.forEach(function (productReservation) {
+						if (productReservation['productId'] === productId) {
+							cell.innerHTML = productReservation['quantity'];
+						}
+					});
+				} else {
+					document.getElementById("product-reserved").innerHTML = response.statusText;
+				}
+			});
+	};
+
+	const displayProducts = function () {
+		fetchAndCall("http://localhost:7200/products", function (response) {
+			if (response.status === 200) {
+				let products = JSON.parse(response.responseText)[""];
+				document.getElementById("all-products-count").innerHTML = "(" + products.length + ")";
+				document.getElementById("all-products").innerHTML = "";
+				products.forEach(function (product) {
+					let tBody = document.getElementById("all-products");
+					let row = tBody.insertRow();
+					let cell = row.insertCell();
+					cell.innerHTML = product;
+					cell.removeAttribute("onclick");
+					cell.onclick = function () {
+						displayProductAvailable(product);
+						displayProductReserved(product);
+					};
+				});
+			} else {
+				document.getElementById("all-products-count").innerHTML = "";
+				document.getElementById("all-products").innerHTML = response.statusText;
 			}
 		});
 	};
 
-	let displayOrders = function (strOrders) {
-		let orders = JSON.parse(strOrders);
-		document.getElementById("all-orders-count").innerHTML = "(" + orders.length + ")";
-		document.getElementById("all-orders").innerHTML = "";
-		orders.forEach(function (order) {
-			let tBody = document.getElementById("all-orders");
-			let row = tBody.insertRow();
-			let cell = row.insertCell();
-			cell.innerHTML = order['orderId'];
-			cell.removeAttribute("onclick");
-			cell.onclick = function () {
-				fetchAndPopulate('single-order', 'http://localhost:7100/orders/' + order['orderId'], displaySingleOrder);
-			};
+	const displayCompletedOrders = function () {
+		fetchAndCall("http://localhost:7300/orders/completed", function (response) {
+			if (response.status === 200) {
+				let completedorders = JSON.parse(response.responseText);
+				document.getElementById("all-completedorders-count").innerHTML = "(" + completedorders.length + ")";
+				document.getElementById("all-completedorders").innerHTML = "";
+				completedorders.forEach(function (completedOrder) {
+					let tBody = document.getElementById("all-completedorders");
+					let row = tBody.insertRow();
+					let cellId = row.insertCell();
+					cellId.innerHTML = completedOrder['orderId'];
+					let cellState = row.insertCell();
+					cellState.innerHTML = completedOrder['state'].replace(/_/g, '-'); //replace _ with - to allow text wrapping
+				});
+			} else {
+				document.getElementById("all-completedorders-count").innerHTML = "";
+				document.getElementById("all-completedorders").innerHTML = response.statusText;
+			}
 		});
 	};
 
-	let displayProducts = function (strProducts) {
-		let products = JSON.parse(strProducts)[""];
-		document.getElementById("all-products-count").innerHTML = "(" + products.length + ")";
-		document.getElementById("all-products").innerHTML = "";
-		products.forEach(function (product) {
-			let tBody = document.getElementById("all-products");
-			let row = tBody.insertRow();
-			let cell = row.insertCell();
-			cell.innerHTML = product;
-			cell.removeAttribute("onclick");
-			cell.onclick = function () {
-				fetchAndPopulate('product-available', 'http://localhost:7200/products/' + product, displayProductAvailable);
-				fetchAndPopulateWithDisplayerArgs('product-available', 'http://localhost:7200/products/reservations/' + product, displayProductReserved, product);
-			};
-		});
-	};
-
-	let displayCompletedOrders = function (strCompletedorders) {
-		let completedorders = JSON.parse(strCompletedorders);
-		document.getElementById("all-completedorders-count").innerHTML = "(" + completedorders.length + ")";
-		document.getElementById("all-completedorders").innerHTML = "";
-		completedorders.forEach(function (completedOrder) {
-			let tBody = document.getElementById("all-completedorders");
-			let row = tBody.insertRow();
-			let cellId = row.insertCell();
-			cellId.innerHTML = completedOrder['orderId'];
-			let cellState = row.insertCell();
-			cellState.innerHTML = completedOrder['state'].replace(/_/g, '-'); //replace _ with - to allow text wrapping
-		});
-	};
-
-	let displayEventBusMessage = function (data) {
+	const displayEventBusMessage = function (data) {
 		const message = JSON.parse(data);
-		console.log(message);
-		console.log(message.orderId);
-		console.log(message.completedById);
-		console.log(message.products);
-
 		let tBody = document.getElementById("all-messages");
 		let row = tBody.insertRow(0);
 		let cell = row.insertCell();
