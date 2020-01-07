@@ -11,7 +11,7 @@ public class OrderCompletedStateFinished implements OrderCompletedState
   @Override
   public OrderCompletedState nextState(OrderCompletedDomainEvent orderCompletedDomainEvent)
   {
-    LOGGER.info("FINSIHED-1");
+    LOGGER.info("FINISHED-1");
     return this;
   }
 

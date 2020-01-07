@@ -11,13 +11,13 @@ public class OrderCompletedStateStockReserved implements OrderCompletedState
   @Override
   public OrderCompletedState nextState(OrderCompletedDomainEvent orderCompletedDomainEvent)
   {
-    LOGGER.info("STOCK_RESERVED-1");
+    LOGGER.info("STOCK_RESERVED_AWAITING_PICK-1");
     return this;
   }
 
   @Override
   public State getState()
   {
-    return State.STOCK_RESERVED;
+    return State.STOCK_RESERVED_AWAITING_PICK;
   }
 }

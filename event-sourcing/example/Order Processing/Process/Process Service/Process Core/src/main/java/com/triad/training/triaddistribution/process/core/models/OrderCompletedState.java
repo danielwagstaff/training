@@ -6,7 +6,7 @@ public interface OrderCompletedState
 {
   enum State
   {
-    INIT, STOCK_NOT_RESERVED, STOCK_RESERVED, FINISHED
+    INIT, STOCK_NOT_RESERVED_AWAITING_STOCK, STOCK_RESERVED_AWAITING_PICK, FINISHED
   }
 
   OrderCompletedState nextState(OrderCompletedDomainEvent orderCompletedDomainEvent);

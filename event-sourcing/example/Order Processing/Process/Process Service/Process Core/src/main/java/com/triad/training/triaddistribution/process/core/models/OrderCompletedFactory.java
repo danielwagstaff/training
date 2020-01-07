@@ -24,10 +24,10 @@ public class OrderCompletedFactory
       case INIT:
         orderCompletedState = new OrderCompletedStateInit(productService);
         break;
-      case STOCK_RESERVED:
+      case STOCK_RESERVED_AWAITING_PICK:
         orderCompletedState = new OrderCompletedStateStockReserved();
         break;
-      case STOCK_NOT_RESERVED:
+      case STOCK_NOT_RESERVED_AWAITING_STOCK:
         orderCompletedState = new OrderCompletedStateStockNotReserved();
         break;
       case FINISHED:
